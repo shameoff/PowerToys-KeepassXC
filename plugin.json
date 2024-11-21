@@ -1,0 +1,10 @@
+{
+  "ID": "KeePassXCPowerToysPluginShameoff22112024",
+  "Disabled": false,
+  "Name": "KeePassXC Plugin",
+  "Author": "shameoff",
+  "Version": "0.0.1rc",
+  "Language": "csharp",
+  "Website": "https://github.com/shameoff/PowerToys-KeePassXC",
+  "ExecuteFileName": "PowerToys-KeePassXC.dll"
+}
