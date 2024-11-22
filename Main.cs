@@ -1,128 +1,54 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Wox.Plugin;
 
-namespace PowerToys_KeePassXC
+namespace Community.PowerToys.Run.Plugin.KeePassXC
 {
-    public class PluginMain : IPlugin
+    public class Main : IPlugin
     {
-        private PluginInitContext _context;
+        public static string PluginID => "181EC9C9CE7E777243213D37E4ED8D7D";
+        public string Name => "PingPong";
+        public string Description => "PowerToys Ping Pong plugin description";
 
-        // Конфигурация: Путь к KeePassXC CLI, базе данных и ключевому файлу
-        private readonly string _keepassCliPath = @"C:\Program Files\KeePassXC\keepassxc-cli.exe"; // TODO Учесть, если утилита в другом месте. Может, использовать значение из Path? 
-        private readonly string _databasePath = @"C:\Users\shameoff\Desktop\Passwords.kdbx"; // TODO Путь до БД стоит настраивать из интерфейса. Разобраться, как это делать
-        private readonly string _dbPassword = "0000"; // TODO Извлекать как-то более безопасно из настроек для повышения безопасности
-        private readonly string _keyFilePath = @"C:\Path\To\KeyFile.key"; // TODO Включить поддержку keyFile auth
-        private IPlugin _pluginImplementation;
 
+        private PluginInitContext? _context;
+
+        
+        // Инициализация плагина
         public void Init(PluginInitContext context)
         {
             _context = context;
         }
 
-        public string Name { get; }
-        public string Description { get; }
-
+        // Реакция на запросы
         public List<Result> Query(Query query)
         {
             var results = new List<Result>();
 
-            try
-            {
-                // Выполнить поиск записей в KeePassXC
-                var entries = SearchDatabase(query.Search);
-
-                foreach (var entry in entries)
-                {
-                    results.Add(new Result
-                    {
-                        Title = entry,
-                        SubTitle = "Perform actions with this entry",
-                        IcoPath = "Images\\icon.png", // Путь к иконке
-                        Action = e =>
-                        {
-                            _context.API.ShowMsg($"Entry Selected: {entry}", "Action triggered");
-                            return true;
-                        }
-                    });
-                }
-            }
-            catch (Exception ex)
+            // Проверяем, что запрос - это "ping"
+            if (query.Search.ToLower() == "ping")
             {
                 results.Add(new Result
                 {
-                    Title = "Error",
-                    SubTitle = ex.Message,
-                    IcoPath = "Images\\error.png"
+                    Title = "pong",
+                    SubTitle = "This is a reply from Ping Pong Plugin.",
+                    IcoPath = "Images\\icon.png", // Путь к иконке (можно заменить на свой)
+                    Action = _ =>
+                    {
+                        // Сообщение в консоли, что результат выбран
+                        _context.API.ShowMsg("You selected 'pong'.", "Ping Pong Plugin");
+                        return true;
+                    }
                 });
             }
-
-            return results;
-        }
-
-        private List<string> SearchDatabase(string searchQuery)
-        {
-            var results = new List<string>();
-
-            // Формирование аргументов для keepassxc-cli
-            var args = new List<string>
+            else
             {
-                "search",
-                _databasePath,
-                searchQuery
-            };
-
-            if (!string.IsNullOrEmpty(_keyFilePath))
-            {
-                args.Add("-k");
-                args.Add(_keyFilePath);
-            }
-
-            try
-            {
-                var process = new Process
+                // Если запрос не совпадает, ничего не возвращаем
+                results.Add(new Result
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = _keepassCliPath,
-                        Arguments = string.Join(" ", args),
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                process.Start();
-
-                // Ввод пароля через stdin
-                using (var writer = process.StandardInput)
-                {
-                    writer.WriteLine(_dbPassword);
-                }
-
-                // Чтение вывода
-                while (!process.StandardOutput.EndOfStream)
-                {
-                    var line = process.StandardOutput.ReadLine();
-                    if (!string.IsNullOrEmpty(line))
-                    {
-                        results.Add(line.Trim());
-                    }
-                }
-
-                process.WaitForExit();
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"Error executing KeePassXC CLI: {ex.Message}");
-                throw;
+                    Title = "Unknown command",
+                    SubTitle = "Try typing 'ping'.",
+                    IcoPath = "Images\\error.png"
+                });
             }
 
             return results;

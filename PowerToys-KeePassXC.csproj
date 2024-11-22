@@ -1,14 +1,31 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
-        <RootNamespace>PowerToys_KeePassXC</RootNamespace>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <RootNamespace>Community.PowerToys.Run.Plugin.KeePassXC</RootNamespace>
+        <AssemblyName>Community.PowerToys.Run.Plugin.KeePassXC</AssemblyName>
+        <Platforms>x64;ARM64</Platforms>
+        <PlatformTarget>$(Platform)</PlatformTarget>
+        <Authors>shameoff</Authors>
+    </PropertyGroup>
+    
+    <PropertyGroup>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies" Version="0.86.0" />
+        <PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies" Version="0.86.0" />
     </ItemGroup>
-
+    
+    <!-- Добавление артефактов в результат сборки -->
+    <ItemGroup>
+        <None Include="plugin.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Include="Images\*.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

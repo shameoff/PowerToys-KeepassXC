@@ -3,8 +3,8 @@
   "Disabled": false,
   "Name": "KeePassXC Plugin",
   "Author": "shameoff",
-  "Version": "0.0.1rc",
+  "Version": "0.0.1",
   "Language": "csharp",
   "Website": "https://github.com/shameoff/PowerToys-KeePassXC",
-  "ExecuteFileName": "PowerToys-KeePassXC.dll"
+  "ExecuteFileName": "Community.PowerToys.Run.Plugin.KeePassXC.dll"
 }
