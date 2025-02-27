@@ -20,65 +20,78 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
 
     private PluginInitContext? _context;
 
-    public IEnumerable<PluginAdditionalOption> AdditionalOptions => new List<PluginAdditionalOption> { };
-    private string KeePassXCPath => "C:\\Program Files\\KeePassXC\\keepassxc-cli.exe"; // Пример пути
-    private string DatabasePath => "\"C:\\Users\\shameoff\\Sync\\backups\\Passwords.kdbx\"";
-    private bool UseMasterPassword => false;
-    private string MasterPassword => "511234"; // Если пустой — будет запрашиваться
-    private bool AutoLogin => true;
-    
-    // public IEnumerable<PluginAdditionalOption> AdditionalOptions => new List<PluginAdditionalOption>
-    // {
-    //     new()
-    //     {
-    //         Key = nameof(KeePassCliPath),
-    //         DisplayLabel = "KeePass CLI Path",
-    //         DisplayDescription = "Path to the keepasscli executable",
-    //         PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Textbox,
-    //         TextValue = KeePassCliPath,
-    //     },
-    //     new()
-    //     {
-    //         Key = nameof(DatabasePath),
-    //         DisplayLabel = "Database Path",
-    //         DisplayDescription = "Path to the KeePass database file (.kdbx)",
-    //         PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Textbox,
-    //         TextValue = DatabasePath,
-    //     },
-    //     new()
-    //     {
-    //         Key = nameof(UseMasterPassword),
-    //         DisplayLabel = "Use Master Password",
-    //         DisplayDescription = "Enable to enter master password manually",
-    //         PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Checkbox,
-    //         Value = UseMasterPassword,
-    //     },
-    //     new()
-    //     {
-    //         Key = nameof(MasterPassword),
-    //         DisplayLabel = "Master Password",
-    //         DisplayDescription = "Master password for the database (leave empty for prompt)",
-    //         PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Textbox,
-    //         TextValue = MasterPassword,
-    //     },
-    //     new()
-    //     {
-    //         Key = nameof(AutoLogin),
-    //         DisplayLabel = "Auto Login",
-    //         DisplayDescription = "Automatically login to the database on startup",
-    //         PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Checkbox,
-    //         Value = AutoLogin,
-    //     }
-    // };
-        
-    // public string KeePassCliPath { get; set; }
-    // public string DatabasePath { get; set; }
-    // public bool UseMasterPassword { get; set; }
-    // public string MasterPassword { get; set; }
-    // public bool AutoLogin { get; set; }
+    public string KeePassXCPath { get; set; }
+    public string DatabasePath { get; set; }
+    public bool UseMasterPassword { get; set; }
+    public string MasterPassword { get; set; }
+    public bool AutoLogin { get; set; }
 
-    
-    
+    /// <summary>
+    /// AdditionalOptions describes options which can be set from the settings menu. 
+    /// </summary>
+    public IEnumerable<PluginAdditionalOption> AdditionalOptions => new List<PluginAdditionalOption>
+    {
+        new()
+        {
+            Key = nameof(KeePassXCPath),
+            DisplayLabel = "KeePass CLI Path",
+            DisplayDescription = "Path to the KeePassXC CLI executable",
+            PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Textbox,
+            TextValue = KeePassXCPath,
+        },
+        new()
+        {
+            Key = nameof(DatabasePath),
+            DisplayLabel = "Database Path",
+            DisplayDescription = "Path to the KeePass database file (.kdbx)",
+            PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Textbox,
+            TextValue = DatabasePath,
+        },
+        new()
+        {
+            Key = nameof(UseMasterPassword),
+            DisplayLabel = "Use Master Password",
+            DisplayDescription = "Enable to enter master password manually",
+            PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Checkbox,
+            Value = UseMasterPassword,
+        },
+        new()
+        {
+            Key = nameof(MasterPassword),
+            DisplayLabel = "Master Password",
+            DisplayDescription = "Master password for the database (leave empty for prompt)",
+            PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Textbox,
+            TextValue = MasterPassword,
+        },
+        new()
+        {
+            Key = nameof(AutoLogin),
+            DisplayLabel = "Auto Login",
+            DisplayDescription = "Automatically login to the database on startup",
+            PluginOptionType = PluginAdditionalOption.AdditionalOptionType.Checkbox,
+            Value = AutoLogin,
+        }
+    };
+
+    /// <summary>
+    /// UpdateSettings does update of variables which are dependant on AdditionalOptions
+    /// </summary>
+    /// <param name="settings">The plugin settings.</param>
+    public void UpdateSettings(PowerLauncherPluginSettings settings)
+    {
+        Log.Info("UpdateSettings", GetType());
+
+        DatabasePath = settings.AdditionalOptions
+            .SingleOrDefault(x => x.Key == nameof(DatabasePath))?.TextValue ?? string.Empty;
+        KeePassXCPath = settings.AdditionalOptions
+            .SingleOrDefault(x => x.Key == nameof(KeePassXCPath))?.TextValue ?? string.Empty;
+        MasterPassword = settings.AdditionalOptions
+            .SingleOrDefault(x => x.Key == nameof(MasterPassword))?.TextValue ?? string.Empty;
+        UseMasterPassword = settings.AdditionalOptions
+            .SingleOrDefault(x => x.Key == nameof(UseMasterPassword))?.Value ?? false;
+    }
+
+
     private PluginInitContext? Context { get; set; }
 
     private string? IconPath { get; set; }
@@ -93,18 +106,22 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
     /// <returns>A filtered list, can be empty when nothing was found.</returns>
     public List<Result> Query(Query query)
     {
-        Log.Info("Query: " + query.Search, GetType());
+        // Логируем входящий запрос
+        Log.Info($"[KeePassXC] Query invoked with search: '{query.Search}'", GetType());
 
-         var results = new List<Result>();
+        var results = new List<Result>();
 
-        // 1. Проверяем, введён ли пользовательский запрос (например, "keepass" + текст).
+        // 1. Проверяем, введён ли пользовательский запрос
+        //    (например, "keepass" + текст).
         //    Если он пустой (только "keepass"), тогда мы показываем ВСЕ записи.
         //    А если пользователь хочет ещё как-то фильтровать, можно учесть query.Search.
         string userSearch = query.Search?.Trim() ?? "";
+        Log.Info($"[KeePassXC] userSearch is: '{userSearch}'", GetType());
 
         // 2. Убеждаемся, что путь к CLI и базе указан
         if (string.IsNullOrEmpty(KeePassXCPath) || !File.Exists(KeePassXCPath))
         {
+            Log.Warn($"[KeePassXC] KeePassXCPath is invalid or file does not exist: '{KeePassXCPath}'", GetType());
             results.Add(new Result
             {
                 Title = "keepassxc-cli not found",
@@ -113,9 +130,14 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             });
             return results;
         }
+        else
+        {
+            Log.Info($"[KeePassXC] KeePassXC CLI found at: '{KeePassXCPath}'", GetType());
+        }
 
         if (string.IsNullOrEmpty(DatabasePath) || !File.Exists(DatabasePath))
         {
+            Log.Warn($"[KeePassXC] DatabasePath is invalid or file does not exist: '{DatabasePath}'", GetType());
             results.Add(new Result
             {
                 Title = "KeePassXC database not found",
@@ -123,6 +145,10 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
                 IcoPath = "error.png"
             });
             return results;
+        }
+        else
+        {
+            Log.Info($"[KeePassXC] Using database path: '{DatabasePath}'", GetType());
         }
 
         // 3. Готовим аргументы для keepassxc-cli ls
@@ -132,12 +158,14 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
         //     что может не сработать под PowerToys, поэтому обычно лучше явно указывать)
         //    Можно добавить --show-protected, если хотите видеть защищенные поля
         //    Но учтите риски в логах/выводе.
-
         string passwordArg = (UseMasterPassword && !string.IsNullOrEmpty(MasterPassword))
             ? $"-p \"{MasterPassword}\""
             : "";
 
         string arguments = $"ls --recursive \"{DatabasePath}\" {passwordArg}";
+
+        // Логируем построенную команду
+        Log.Info($"[KeePassXC] Executing '{KeePassXCPath}' with args: {arguments}", GetType());
 
         var psi = new ProcessStartInfo
         {
@@ -156,18 +184,26 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             using (var process = Process.Start(psi))
             {
                 if (process == null)
-                    throw new Exception("Failed to start keepassxc-cli process.");
+                {
+                    throw new Exception("[KeePassXC] Failed to start keepassxc-cli process.");
+                }
 
+                // Читаем весь stdout и stderr
                 output = process.StandardOutput.ReadToEnd();
                 error = process.StandardError.ReadToEnd();
                 process.WaitForExit();
             }
 
+            Log.Info($"[KeePassXC] CLI output:\n{output}", GetType());
+            Log.Info($"[KeePassXC] CLI error:\n{error}", GetType());
+
             // 4. Проверяем ошибки
             if (!string.IsNullOrEmpty(error))
             {
-                // Иногда keepassxc-cli пишет предупреждения в stderr, 
+                // Иногда keepassxc-cli пишет предупреждения в stderr,
                 // можно проверять код возврата, но для простоты тут считаем, что если есть stderr — это ошибка
+                Log.Warn($"[KeePassXC] keepassxc-cli stderr is not empty: '{error}'", GetType());
+
                 results.Add(new Result
                 {
                     Title = "Error in keepassxc-cli",
@@ -180,6 +216,8 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             // 5. Если вывод пуст — скорее всего нет записей или ошибка
             if (string.IsNullOrEmpty(output))
             {
+                Log.Warn("[KeePassXC] keepassxc-cli returned empty output", GetType());
+
                 results.Add(new Result
                 {
                     Title = "No entries found",
@@ -193,11 +231,12 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             //    "Internet/Gmail"
             //    "Internet/StackOverflow"
             //    Если есть группы, keepassxc-cli покажет их тоже.
-
             var lines = output
                 .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => line.Trim())
                 .ToList();
+
+            Log.Info($"[KeePassXC] Parsed {lines.Count} line(s) from CLI output.", GetType());
 
             // 7. Фильтруем или сортируем
             //    - Сортируем по алфавиту
@@ -205,9 +244,15 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             //      можем фильтровать (например, line.Contains(userSearch, StringComparison.OrdinalIgnoreCase)).
             if (!string.IsNullOrEmpty(userSearch))
             {
-                lines = lines.Where(line => 
-                    line.IndexOf(userSearch, StringComparison.OrdinalIgnoreCase) >= 0)
+                lines = lines
+                    .Where(line => line.IndexOf(userSearch, StringComparison.OrdinalIgnoreCase) >= 0)
                     .ToList();
+
+                Log.Info($"[KeePassXC] After filtering by '{userSearch}', {lines.Count} line(s) left.", GetType());
+            }
+            else
+            {
+                Log.Info($"[KeePassXC] No search filter applied; showing all entries.", GetType());
             }
 
             lines.Sort(StringComparer.OrdinalIgnoreCase);
@@ -215,25 +260,26 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             // 8. Превращаем каждую строку в результат
             foreach (var line in lines)
             {
-                // Можно разобрать группу/запись более подробно.
-                // Здесь Title — это полное имя (путь) записи, 
-                // SubTitle можно сделать статичным или добавлять деталь.
+                Log.Info($"[KeePassXC] Creating result for entry: '{line}'", GetType());
+
                 results.Add(new Result
                 {
                     Title = line,
                     SubTitle = "KeePassXC Entry",
                     IcoPath = "Images\\key.png", // или свой путь к иконке
-                    // Можно добавить Action, чтобы при клике скопировать пароль или открыть запись:
                     Action = _ =>
                     {
+                        // Логируем, что пользователь кликнул по записи
+                        Log.Info($"[KeePassXC] User clicked entry: '{line}'", GetType());
+
                         // Для получения пароля понадобится ещё раз вызвать keepassxc-cli:
                         // keepassxc-cli show "DatabasePath" -p "MasterPassword" "line"
                         // Но учтите, что passwordArg может «утечь» в логи, 
                         // поэтому решайте, безопасно ли это.
                         // Ниже — пример копирования в буфер, но не гарантирует, что всё сработает.
-                        
+
                         //Clipboard.SetText(password);
-                        // И т.д.
+                        // и т.д.
                         return true;
                     }
                 });
@@ -242,6 +288,8 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             // Если после фильтрации нет строк — сообщаем
             if (!results.Any())
             {
+                Log.Info("[KeePassXC] No entries after filtering; adding 'No matching entries' result.", GetType());
+
                 results.Add(new Result
                 {
                     Title = "No matching entries",
@@ -252,6 +300,7 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
         }
         catch (Exception ex)
         {
+            Log.Exception("[KeePassXC] Exception during request: " + ex.Message, ex, ex.GetType());
             results.Add(new Result
             {
                 Title = "Exception running keepassxc-cli",
@@ -260,8 +309,12 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             });
         }
 
+        // Логируем финальное количество результатов, которое вернём в PowerToys
+        Log.Info($"[KeePassXC] Returning {results.Count} result(s) to PowerToys.", GetType());
+
         return results;
     }
+
 
     /// <summary>
     /// Initialize the plugin with the given <see cref="PluginInitContext"/>.
@@ -286,7 +339,8 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
 
         if (selectedResult?.ContextData is (int words, TimeSpan transcription))
         {
-            return new List<ContextMenuResult> {
+            return new List<ContextMenuResult>
+            {
                 new ContextMenuResult
                 {
                     PluginName = Name,
@@ -311,7 +365,8 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
 
         if (selectedResult?.ContextData is int characters)
         {
-            return new List<ContextMenuResult> {
+            return new List<ContextMenuResult>
+            {
                 new ContextMenuResult
                 {
                     PluginName = Name,
@@ -324,7 +379,7 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
             };
         }
 
-        return new List<ContextMenuResult>{};
+        return new List<ContextMenuResult> { };
     }
 
     /// <summary>
@@ -333,17 +388,6 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
     /// <returns>The control.</returns>
     /// <exception cref="NotImplementedException">method is not implemented.</exception>
     public Control CreateSettingPanel() => throw new NotImplementedException();
-
-    /// <summary>
-    /// Updates settings.
-    /// </summary>
-    /// <param name="settings">The plugin settings.</param>
-    public void UpdateSettings(PowerLauncherPluginSettings settings)
-    {
-        Log.Info("UpdateSettings", GetType());
-
-        // CountSpaces = settings.AdditionalOptions.SingleOrDefault(x => x.Key == nameof(CountSpaces))?.Value ?? false; // TODO Удалить
-    }
 
     /// <inheritdoc/>
     public void Dispose()
@@ -373,7 +417,9 @@ public class Main : IPlugin, IContextMenu, ISettingProvider, IDisposable
         Disposed = true;
     }
 
-    private void UpdateIconPath(Theme theme) => IconPath = theme == Theme.Light || theme == Theme.HighContrastWhite ? Context?.CurrentPluginMetadata.IcoPathLight : Context?.CurrentPluginMetadata.IcoPathDark;
+    private void UpdateIconPath(Theme theme) => IconPath = theme == Theme.Light || theme == Theme.HighContrastWhite
+        ? Context?.CurrentPluginMetadata.IcoPathLight
+        : Context?.CurrentPluginMetadata.IcoPathDark;
 
     private void OnThemeChanged(Theme currentTheme, Theme newTheme) => UpdateIconPath(newTheme);
 
