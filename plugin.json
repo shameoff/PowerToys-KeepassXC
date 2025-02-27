@@ -1,10 +1,15 @@
 {
-  "ID": "KeePassXCPowerToysPluginShameoff22112024",
+  "ID": "181EC9C9CE7E777243213D37E4ED8D7D",
+  "ActionKeyword": "keepass",
+  "IsGlobal": false,
   "Disabled": false,
   "Name": "KeePassXC Plugin",
   "Author": "shameoff",
   "Version": "0.0.1",
   "Language": "csharp",
   "Website": "https://github.com/shameoff/PowerToys-KeePassXC",
-  "ExecuteFileName": "Community.PowerToys.Run.Plugin.KeePassXC.dll"
+  "ExecuteFileName": "Community.PowerToys.Run.Plugin.KeePassXC.dll",
+  "DynamicLoading": false,
+  "IcoPathDark": "Images\\keepassxc.logo.png",
+  "IcoPathLight": "Images\\keepassxc.logo.png"
 }
