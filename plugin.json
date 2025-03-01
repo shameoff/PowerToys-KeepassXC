@@ -1,9 +1,9 @@
 {
   "ID": "181EC9C9CE7E777243213D37E4ED8D7D",
-  "ActionKeyword": "keepass",
+  "ActionKeyword": "kp?",
   "IsGlobal": false,
   "Disabled": false,
-  "Name": "KeePassXC Plugin",
+  "Name": "Search KeePassXC",
   "Author": "shameoff",
   "Version": "0.0.1",
   "Language": "csharp",
